@@ -1,0 +1,133 @@
+---
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+### Exercise quality prediction  
+
+#### Dan Wong  
+  
+  
+#### Overview  
+
+This document details the creation, training and selection of a machine learning algorithm to classify the quality of exercise (weight lifting) using accelerometer data.
+
+Produced as part of the Coursera Practical Machine learning course, week 4 assignment.  
+
+Data, methodology and the original paper can be found at the link below, courtesy of;  
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H.  
+[Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/work.jsf?p1=10335)
+
+
+#### Data load, set up and initialisation
+```{r echo=FALSE}
+
+###### THESE commands should be removed from the document once complete
+setwd("~/Study/Machine_Learning/Week_4_Project")
+training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
+
+
+###### REMOVE THE ABOVE COMMANDS ON COMPLETION
+
+# initialise variables and set seed to allow reproduction
+set.seed(696969)
+
+#load the data
+
+########## UNCOMMENT THESE COMMANDS ON COMPLETION
+## trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+## testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+## training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+## testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+########## UNCOMMENT THESE COMMANDS ON COMPLETION
+
+#references
+library(caret)
+library(rpart)
+library(randomForest)
+
+```
+
+
+#### Preprocessing data  
+
+Examination of the data shows various redundant columns that seem unlikely to be useful for classification purposes (indices and timestamps).  
+Further many columns contain a large number (>95%) of NA values.  
+Whilst it is possible that some of these variables have some prediction utility - they have been removed here in the interests of brevity and simplicity.
+
+```{r echo=FALSE}
+
+# check the number of na's in each column 
+redundant <- data.frame(colSums(is.na(training)))
+redundant <- cbind(redundant,rownames(redundant))
+colnames(redundant)<- c("na_count", "column_name")
+redundant <- redundant[order(-redundant$na_count),]
+
+# select the column names where 95% of the entries are na
+remove <- subset(redundant, na_count >0.95*nrow(training))
+remove <- as.vector(remove[,2])
+
+# add some other manually selected column names to remove 
+# (indices, timestamps and usernames)
+remove[101:106] <- c("X","raw_timestamp_part_1","raw_timestamp_part_2","cvtd_timestamp","user_name","new_window")
+
+#remove these columns from the training and test data
+training <- training[ , !(names(training) %in% remove)]
+testing <- testing[ , !(names(testing) %in% remove)]
+```
+
+
+#### Model creation and training
+  
+Training data is partitioned into a training and validation set to allow the estimation of out of sample error.
+
+```{r echo=TRUE}
+# create partition and split data
+inTrain <- createDataPartition(y=training$classe,
+                              p=0.7, list=FALSE)
+training_data <- training[inTrain,]
+validation_data <- training[-inTrain,]
+```
+
+A random forest model is trained using 5 fold cross validation.
+
+```{r echo=TRUE}
+# specify the cross validation method
+fitControl <- trainControl(method = "cv",
+                           number = 5)
+# Train the model
+#rf_model_non_pca <- train(classe ~.,data=training_data,method="rf",trControl=fitControl,prox=TRUE)
+
+rf_model_non_pca
+
+# graph the variables
+varImpPlot(rf_model_non_pca$finalModel,type=2)
+
+```
+
+An out of sample accuracy estimate is provided by applying this model to the validation data set.
+
+```{r echo=TRUE}
+# predict values and create confusion matrix
+confusionMatrix(predict(rf_model_non_pca, newdata = validation_data), validation_data$classe)
+
+#tidy up the workspace
+rm(training_data)
+rm(validation_data)
+rm(rf_model_non_pca)
+gc()
+
+```
+
+Since accuracy looks acceptable a similar model will be trained using the entire training dataset and used to predict on the assigned testing data.
+
+```{r echo=TRUE}
+# Train the final model
+final_model <- train(classe ~.,data=training,method="rf",trControl=fitControl,prox=TRUE)
+
+# Predict the testing values
+predict(final_model,newdata=testing)
+
+```
