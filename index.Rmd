@@ -2,7 +2,7 @@
 output:
   html_document:
     keep_md: yes
-  pdf_document: default
+  html_document: default
 ---
 ### Exercise quality prediction  
 
@@ -23,25 +23,15 @@ Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H.
 #### Data load, set up and initialisation
 ```{r echo=FALSE}
 
-###### THESE commands should be removed from the document once complete
-setwd("C:/Users/ksumsakul/Desktop/TO DO LIST/Dan_temp/ML_Project")
-training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
-testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
-
-
-###### REMOVE THE ABOVE COMMANDS ON COMPLETION
-
 # initialise variables and set seed to allow reproduction
 set.seed(696969)
 
 #load the data
 
-########## UNCOMMENT THESE COMMANDS ON COMPLETION
-## trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-## testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
-## training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
-## testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
-########## UNCOMMENT THESE COMMANDS ON COMPLETION
+trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
 
 #references
 library(caret)
@@ -135,6 +125,7 @@ Since accuracy looks acceptable a similar model will be trained using the entire
 # Train the final model
 #final_model <- train(classe ~.,data=training,method="rf",trControl=fitControl,prox=TRUE)
 
+# to save on memory the final model was run seperately from this session and loaded 
 load("final_model.rda")
 
 # Predict the testing values
