@@ -24,7 +24,7 @@ Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H.
 ```{r echo=FALSE}
 
 ###### THESE commands should be removed from the document once complete
-setwd("~/Study/Machine_Learning/Week_4_Project")
+setwd("C:/Users/ksumsakul/Desktop/TO DO LIST/Dan_temp/ML_Project")
 training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
 testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
 
@@ -47,6 +47,8 @@ set.seed(696969)
 library(caret)
 library(rpart)
 library(randomForest)
+library(parallel)
+library(doParallel)
 
 ```
 
@@ -83,7 +85,7 @@ testing <- testing[ , !(names(testing) %in% remove)]
   
 Training data is partitioned into a training and validation set to allow the estimation of out of sample error.
 
-```{r echo=TRUE}
+```{r echo=FALSE}
 # create partition and split data
 inTrain <- createDataPartition(y=training$classe,
                               p=0.7, list=FALSE)
@@ -91,25 +93,31 @@ training_data <- training[inTrain,]
 validation_data <- training[-inTrain,]
 ```
 
-A random forest model is trained using 5 fold cross validation.
+A random forest model is trained using 3 fold cross validation.
 
-```{r echo=TRUE}
+```{r echo=FALSE, cache=TRUE}
+
+# use multiple cores
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
 # specify the cross validation method
 fitControl <- trainControl(method = "cv",
-                           number = 5)
+                           number = 3)
 # Train the model
-#rf_model_non_pca <- train(classe ~.,data=training_data,method="rf",trControl=fitControl,prox=TRUE)
+rf_model_non_pca <- train(classe ~.,data=training_data,method="rf",trControl=fitControl,prox=TRUE)
 
 rf_model_non_pca
 
 # graph the variables
 varImpPlot(rf_model_non_pca$finalModel,type=2)
 
+stopCluster(cluster)
 ```
 
 An out of sample accuracy estimate is provided by applying this model to the validation data set.
 
-```{r echo=TRUE}
+```{r echo=FALSE}
 # predict values and create confusion matrix
 confusionMatrix(predict(rf_model_non_pca, newdata = validation_data), validation_data$classe)
 
@@ -125,7 +133,9 @@ Since accuracy looks acceptable a similar model will be trained using the entire
 
 ```{r echo=TRUE}
 # Train the final model
-final_model <- train(classe ~.,data=training,method="rf",trControl=fitControl,prox=TRUE)
+#final_model <- train(classe ~.,data=training,method="rf",trControl=fitControl,prox=TRUE)
+
+load("final_model.rda")
 
 # Predict the testing values
 predict(final_model,newdata=testing)
